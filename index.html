@@ -384,12 +384,13 @@
     function listenComments(tripId, callback) {
       db.collection('comments')
         .where('tripId', '==', tripId)
-        .orderBy('timestamp', 'asc')
         .onSnapshot(snapshot => {
-          const comments = [];
-          snapshot.forEach(doc => comments.push({ id: doc.id, ...doc.data() }));
-          callback(comments);
-        });
+      const comments = [];
+      snapshot.forEach(doc => comments.push({ id: doc.id, ...doc.data() }));
+      // Sort client-side (newest last)
+      comments.sort((a, b) => (a.timestamp?.toMillis() || 0) - (b.timestamp?.toMillis() || 0));
+      callback(comments);
+    });
     }
 
     async function addComment(tripId, name, text) {
