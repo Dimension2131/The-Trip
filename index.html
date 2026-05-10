@@ -515,18 +515,30 @@
 
     // ---------- BUDGET ----------
     function updateBudget() {
-      const people = parseInt(document.getElementById('numPeople').value) || 10;
-      const daily = parseInt(document.getElementById('dailyExtra').value) || 4000;
-      const nights = parseInt(document.getElementById('numNights').value) || 2;
-      const tbody = document.querySelector('#budgetTable tbody');
-      tbody.innerHTML = '';
-      trips.forEach(trip => {
-        trip.accommodations.forEach(acc => {
-          const accTotal = acc.price;
-          const extraTotal = daily * people * nights;
-          const grandTotal = accTotal + extraTotal;
-          const perPerson = Math.round(grandTotal / people);
-          tbody.innerHTML += `<tr><td>${trip.emoji} ${trip.name} → ${acc.name}</td><td>LKR ${accTotal.toLocaleString()}</td><td>LKR ${extraTotal.toLocaleString()}</td><td><strong>LKR ${grandTotal.toLocaleString()}</strong></td><td>LKR ${perPerson.toLocaleString()}</td></tr>`;
+    const people = parseInt(document.getElementById('numPeople').value) || 10;
+    const daily = parseInt(document.getElementById('dailyExtra').value) || 4000;
+    const nights = parseInt(document.getElementById('numNights').value) || 2;
+    const tbody = document.querySelector('#budgetTable tbody');
+    tbody.innerHTML = '';
+
+    trips.forEach(trip => {
+      trip.accommodations.forEach(acc => {
+        // Original price was total for 2 nights → compute nightly rate
+        const nightlyRate = Math.round(acc.price / 2);
+        const accTotal = nightlyRate * nights;          // stay scales with nights
+        const extraTotal = daily * people * nights;    // food/extra also scales
+        const grandTotal = accTotal + extraTotal;
+        const perPerson = Math.round(grandTotal / people);
+
+        const row = document.createElement('tr');
+        row.innerHTML = `
+          <td>${trip.emoji} ${trip.name} → ${acc.name}</td>
+          <td>LKR ${accTotal.toLocaleString()}</td>
+          <td>LKR ${extraTotal.toLocaleString()}</td>
+          <td><strong>LKR ${grandTotal.toLocaleString()}</strong></td>
+          <td>LKR ${perPerson.toLocaleString()}</td>
+        `;
+        tbody.appendChild(row);
         });
       });
     }
