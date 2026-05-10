@@ -1,0 +1,549 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Trip Proposals 2026 · Private</title>
+
+  <!-- Firebase (compat) -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+
+  <style>
+    /* ========== DARK GLASS THEME ========== */
+    :root {
+      --bg: #0a0f0c;
+      --card-bg: rgba(15, 25, 20, 0.55);
+      --card-border: rgba(255,255,255,0.08);
+      --text: #e2e8e0;
+      --sub: #9bb5a5;
+      --accent: #2dd4a8;
+      --accent-glow: rgba(45,212,168,0.3);
+      --radius: 1.5rem;
+      --radius-sm: 0.75rem;
+      --shadow: 0 8px 32px rgba(0,0,0,0.4);
+      --transition: 0.25s ease;
+      --glass-blur: blur(16px);
+    }
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body {
+      font-family: 'Inter', system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+      background: radial-gradient(ellipse at 50% 0%, #0e2a1f 0%, #040906 70%);
+      background-attachment: fixed;
+      color: var(--text);
+      line-height: 1.6;
+      min-height: 100vh;
+      padding: 2rem 1.5rem;
+    }
+
+    .password-gate {
+      position: fixed; top:0; left:0; width:100%; height:100%;
+      background: rgba(0,0,0,0.85); backdrop-filter: blur(12px);
+      display: flex; align-items: center; justify-content: center;
+      z-index: 9999; transition: opacity 0.4s;
+    }
+    .password-gate.hidden { opacity: 0; pointer-events: none; }
+    .gate-box {
+      background: var(--card-bg); backdrop-filter: var(--glass-blur);
+      border: 1px solid var(--card-border); border-radius: var(--radius);
+      padding: 2.5rem; text-align: center; max-width: 400px; width: 90%;
+      box-shadow: var(--shadow);
+    }
+    .gate-box h2 { font-size: 2rem; margin-bottom: 1rem; color: var(--accent); }
+    .gate-box input {
+      width: 100%; padding: 0.8rem; background: rgba(255,255,255,0.07);
+      border: 1px solid rgba(255,255,255,0.15); border-radius: 0.5rem;
+      color: white; font-size: 1rem; margin: 0.8rem 0;
+    }
+    .gate-box input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 12px var(--accent-glow); }
+    .gate-box button {
+      background: var(--accent); color: #0a0f0c; border: none; padding: 0.8rem 2rem;
+      border-radius: 2rem; font-weight: 700; font-size: 1rem; cursor: pointer; transition: var(--transition);
+    }
+    .gate-box button:hover { background: #40f0c0; box-shadow: 0 0 16px var(--accent-glow); }
+    .gate-error { color: #ff6b6b; margin-top: 0.5rem; font-size: 0.9rem; }
+
+    .container { max-width: 1350px; margin: 0 auto; }
+    header { text-align: center; margin-bottom: 3rem; }
+    h1 {
+      font-size: clamp(2.5rem, 7vw, 3.6rem);
+      background: linear-gradient(to right, #2dd4a8, #8bf0cf);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+      font-weight: 800; letter-spacing: -0.02em;
+    }
+    .subtitle { color: var(--sub); font-size: 1.1rem; margin-top: 0.4rem; }
+
+    .trips-grid {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(360px, 1fr)); gap: 2rem;
+    }
+
+    .trip-card {
+      background: var(--card-bg); backdrop-filter: var(--glass-blur);
+      border: 1px solid var(--card-border); border-radius: var(--radius);
+      padding: 2rem; display: flex; flex-direction: column;
+      transition: transform var(--transition), box-shadow var(--transition); box-shadow: var(--shadow);
+    }
+    .trip-card:hover { transform: translateY(-6px); box-shadow: 0 20px 40px rgba(0,0,0,0.6), 0 0 20px var(--accent-glow); }
+
+    .trip-header { display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem; }
+    .trip-icon { font-size: 2.5rem; filter: drop-shadow(0 0 8px var(--accent-glow)); }
+    .trip-card h2 {
+      font-size: 2rem; font-weight: 700;
+      background: linear-gradient(135deg, #e2e8e0, #b4f0d5);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    }
+
+    .activities { list-style: none; display: flex; flex-wrap: wrap; gap: 0.5rem; margin: 1rem 0 1.5rem; }
+    .activities li {
+      background: rgba(45,212,168,0.1); border: 1px solid rgba(45,212,168,0.3);
+      color: #b4f0d5; padding: 0.3rem 1rem; border-radius: 30px; font-size: 0.85rem;
+    }
+    .travel-time {
+      display: flex; align-items: center; gap: 0.5rem; color: var(--sub); font-weight: 500;
+      margin-bottom: 1.5rem; background: rgba(255,255,255,0.03); padding: 0.4rem 1rem;
+      border-radius: 0.5rem; width: fit-content; border: 1px solid rgba(255,255,255,0.05);
+    }
+
+    .accommodations h3 { font-size: 1.3rem; font-weight: 700; margin-bottom: 0.8rem; color: var(--accent); }
+    .acc-list { display: flex; flex-direction: column; gap: 0.75rem; }
+    .acc-item {
+      background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06);
+      border-radius: var(--radius-sm); padding: 1rem; display: flex; flex-wrap: wrap;
+      align-items: center; justify-content: space-between; transition: border var(--transition);
+    }
+    .acc-item:hover { border-color: var(--accent); }
+    .acc-name-price { flex: 1; }
+    .acc-name { font-weight: 700; color: #fff; display: block; }
+    .acc-price { color: var(--sub); font-size: 0.9rem; margin-top: 0.3rem; }
+    .acc-buttons { display: flex; gap: 0.5rem; }
+
+    .btn {
+      background: var(--accent); color: #0a221a; border: none; padding: 0.5rem 1.2rem;
+      border-radius: 2rem; cursor: pointer; font-size: 0.85rem; font-weight: 700;
+      transition: var(--transition); text-decoration: none; display: inline-flex; align-items: center; gap: 0.3rem;
+    }
+    .btn.outline { background: transparent; color: var(--accent); border: 1.5px solid var(--accent); }
+    .btn:hover { background: #40f0c0; box-shadow: 0 0 16px var(--accent-glow); }
+    .btn.outline:hover { background: rgba(45,212,168,0.1); color: #fff; }
+
+    .vote-section { margin-top: 1.8rem; display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; }
+    .vote-btn {
+      background: #2dd4a8; font-weight: 800; padding: 0.6rem 1.6rem; font-size: 1rem; border-radius: 2rem;
+    }
+    .vote-btn:disabled { background: #3a4b41; color: #8aa395; pointer-events: none; box-shadow: none; }
+    .vote-count { font-weight: 700; font-size: 1.1rem; color: var(--accent); }
+
+    .comment-wall { margin-top: 2rem; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 1.5rem; }
+    .comment-wall h4 { font-size: 1.2rem; margin-bottom: 0.8rem; color: var(--accent); }
+    .comment-input { display: flex; gap: 0.5rem; margin-bottom: 1rem; flex-wrap: wrap; }
+    .comment-input input, .comment-input textarea {
+      background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 0.5rem; padding: 0.6rem; color: white; font-family: inherit;
+    }
+    .comment-input input { width: 110px; }
+    .comment-input textarea { flex: 1; min-width: 160px; height: 38px; resize: none; }
+    .comment-input button { background: var(--accent); border: none; border-radius: 2rem; padding: 0 1.2rem; font-weight: 700; cursor: pointer; }
+
+    .live-comments {
+      max-height: 220px; overflow-y: auto; background: rgba(0,0,0,0.2);
+      border-radius: 0.6rem; padding: 0.6rem; font-size: 0.9rem;
+    }
+    .comment-item { padding: 0.4rem 0; border-bottom: 1px solid rgba(255,255,255,0.05); }
+    .comment-item strong { color: var(--accent); }
+
+    .modal {
+      display: none; position: fixed; top:0; left:0; width:100%; height:100%;
+      background: rgba(0,0,0,0.7); backdrop-filter: blur(8px);
+      align-items: center; justify-content: center; z-index: 1000; padding: 1rem;
+    }
+    .modal.open { display: flex; }
+    .modal-content {
+      background: rgba(10, 28, 20, 0.85); backdrop-filter: blur(20px);
+      border: 1px solid rgba(255,255,255,0.1); border-radius: var(--radius);
+      padding: 2rem; max-width: 600px; width: 100%; max-height: 80vh;
+      overflow-y: auto; position: relative; box-shadow: 0 30px 50px rgba(0,0,0,0.6);
+    }
+    .modal-close { position: absolute; top: 0.8rem; right: 1rem; background: none; border: none; font-size: 1.8rem; cursor: pointer; color: var(--sub); }
+    .facilities-block { white-space: pre-line; color: #ccd7d0; line-height: 1.8; }
+
+    .budget-panel {
+      background: var(--card-bg); backdrop-filter: var(--glass-blur);
+      border: 1px solid var(--card-border); border-radius: var(--radius);
+      padding: 2rem; margin-top: 3rem; box-shadow: var(--shadow);
+    }
+    .budget-panel h2 { color: var(--accent); margin-bottom: 1.5rem; }
+    .budget-controls { display: flex; flex-wrap: wrap; gap: 1.5rem; margin-bottom: 2rem; }
+    .budget-controls label { display: flex; flex-direction: column; color: var(--sub); font-weight: 600; gap: 0.3rem; }
+    .budget-controls input {
+      background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15);
+      border-radius: 0.5rem; padding: 0.5rem; color: white; width: 90px;
+    }
+    .budget-table { width: 100%; border-collapse: collapse; background: rgba(0,0,0,0.2); border-radius: var(--radius-sm); overflow: hidden; }
+    .budget-table th { background: rgba(45,212,168,0.15); color: var(--accent); padding: 0.8rem; text-align: left; }
+    .budget-table td { padding: 0.8rem; border-bottom: 1px solid rgba(255,255,255,0.05); }
+
+    @media (max-width: 600px) {
+      body { padding: 1rem; }
+      .trips-grid { grid-template-columns: 1fr; }
+      .acc-item { flex-direction: column; align-items: flex-start; }
+      .acc-buttons { margin-top: 0.5rem; width: 100%; justify-content: space-between; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Password Gate -->
+  <div class="password-gate" id="passwordGate">
+    <div class="gate-box">
+      <h2>🔐 Private Trip</h2>
+      <p style="color:var(--sub); margin-bottom:1.2rem;">Enter the secret password</p>
+      <input type="password" id="passwordInput" placeholder="password" />
+      <button id="passwordSubmit">Unlock</button>
+      <div class="gate-error" id="gateError"></div>
+    </div>
+  </div>
+
+  <!-- Main Content (hidden initially) -->
+  <div class="container" id="mainContent" style="display:none;">
+    <header>
+      <h1>🌴 Trip Proposals</h1>
+      <p class="subtitle">U can only vote for one · live comments/notes if yall wanna type something down to remember · The Reasons</p>
+    </header>
+
+    <div class="trips-grid" id="tripsContainer"></div>
+
+    <div class="budget-panel">
+      <h2>💰 Budget Estimator</h2>
+      <div class="budget-controls">
+        <label>👥 Travellers <input type="number" id="numPeople" value="10" min="1"></label>
+        <label>🍛 Daily extra/person (LKR) <input type="number" id="dailyExtra" value="4000" min="0" step="500"></label>
+        <label>🌙 Nights <input type="number" id="numNights" value="2" min="1"></label>
+      </div>
+      <table class="budget-table" id="budgetTable"></table>
+    </div>
+  </div>
+
+  <!-- Info Modal -->
+  <div class="modal" id="infoModal">
+    <div class="modal-content">
+      <button class="modal-close" onclick="closeModal()">&times;</button>
+      <div id="modalBody"></div>
+    </div>
+  </div>
+
+  <script>
+    // ---------- FIREBASE CONFIG ----------
+    const firebaseConfig = {
+      apiKey: "AIzaSyCjVt3LCceaQ8Tpzf12b3K86Bmd6iRnrN8",
+      authDomain: "trip-e5d4b.firebaseapp.com",
+      projectId: "trip-e5d4b",
+      storageBucket: "trip-e5d4b.firebasestorage.app",
+      messagingSenderId: "980169441003",
+      appId: "1:980169441003:web:3cabc3ba2b832787b8c8ae"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+
+    // ---------- TRIP DATA ----------
+    const trips = [
+      {
+        id: "wilpattu", emoji: "🐆", name: "Wilpattu Safari",
+        activities: ["Safari", "Fighting da animals", "Befriending da animals", "Not dying to said animals"],
+        travelTime: "4 hours 30 mins",
+        accommodations: [
+          {
+            name: "Wilpattu Forest Buma Lodge", price: 54617,
+            link: "https://www.booking.com/hotel/lk/wilpattu-buma-wilpattu.en-gb.html?aid=373420&label=wilpattu-TN0zINL62vk0tIxRyI4YGgS394449923009%3Apl%3Ata%3Ap1%3Ap2%3Aac%3Aap%3Aneg%3Afi%3Atikwd-30597217534%3Alp1009919%3Ali%3Adec%3Adm%3Appccp%3DUmFuZG9tSVYkc2RlIyh9Ydj4ck6nIj5YRjPru0SpaEk&sid=68c4188c5b1140ab7687ef0998b50bdb&all_sr_blocks=1214601404_427073679_6_2_0%2C1214601405_427073679_4_2_0&checkin=2026-06-01&checkout=2026-06-03&dest_id=900050876&dest_type=city&dist=0&group_adults=10&group_children=0&hapos=1&highlighted_blocks=1214601404_427073679_6_2_0%2C1214601405_427073679_4_2_0&hpos=1&matching_block_id=1214601404_427073679_6_2_0&no_rooms=1&req_adults=10&req_children=0&room1=A%2CA%2CA%2CA%2CA%2CA%2CA%2CA%2CA%2CA&sb_price_type=total&sr_order=price&sr_pri_blocks=1214601404_427073679_6_2_0__11000%2C1214601405_427073679_4_2_0__8000&srepoch=1778411844&srpvid=8f4d4f5ec7e901c4&type=total&ucfs=1&",
+            details: "Most popular: Non-smoking rooms, Airport shuttle, Room service, Free WiFi, Free parking, Family rooms, Breakfast\nGreat for your stay: Parking, Private bathroom, Air conditioning, Free WiFi, View, Family rooms, Airport shuttle, Room service, Free parking, Shower\n\nParking: Free private parking is possible on site (reservation is not needed)\nInternet: WiFi is available in all areas and is free of charge\n\nKitchen: Dining table, Cleaning products, Electric kettle\nPrivate bathroom: Toilet paper, Towels, Bidet, Additional toilet, Bath or shower, Toilet, Shower\nLiving Area: Dining area, Desk\nMedia & Technology: Satellite channels, TV, Pay-per-view channels\nRoom amenities: Socket near the bed, Drying rack for clothing, Clothes rack, Tile/marble floor, Fan\nOutdoors: Picnic area, Outdoor furniture, Garden\nWellness: Fitness classes, Fitness\nFood & Drink: Fruits (extra charge), Wine/champagne (extra charge), Kid-friendly buffet, Kids' meals (extra charge), Grocery deliveries (extra charge), Special diet menus (on request), Packed lunches, Breakfast in the room, Room service, Tea/Coffee maker\nActivities: Archery (extra charge), Live music/performance (extra charge), Cooking class (extra charge), Tour or class about local culture (extra charge), Bike tours (extra charge), Walking tours (extra charge), Cycling (off-site)\nTransport: Bicycle rental (extra charge), Car hire, Airport shuttle (extra charge)\nReception services: Invoice provided, Private check-in/check-out, Luggage storage, Currency exchange, Express check-in/check-out, 24-hour front desk\nCleaning services: Daily housekeeping, Ironing service (extra charge), Laundry (extra charge)\nMiscellaneous: Air conditioning (extra charge), Non-smoking throughout, Family rooms, Non-smoking rooms\nSafety & security: Fire extinguishers, CCTV outside property, CCTV in common areas, Smoke alarms, Security alarm, Key card access, Key access, 24-hour security\nLanguages spoken: English"
+          },
+          {
+            name: "Governor's Camp Wilpattu", price: 97667,
+            link: "https://www.booking.com/hotel/lk/governor-39-s-camp-wilpattu.en-gb.html?aid=373420&label=wilpattu-TN0zINL62vk0tIxRyI4YGgS394449923009%3Apl%3Ata%3Ap1%3Ap2%3Aac%3Aap%3Aneg%3Afi%3Atikwd-30597217534%3Alp1009919%3Ali%3Adec%3Adm%3Appccp%3DUmFuZG9tSVYkc2RlIyh9Ydj4ck6nIj5YRjPru0SpaEk&sid=68c4188c5b1140ab7687ef0998b50bdb&all_sr_blocks=1096886305_387157840_10_42_0&checkin=2026-06-01&checkout=2026-06-03&dest_id=900050876&dest_type=city&dist=0&group_adults=10&group_children=0&hapos=2&highlighted_blocks=1096886305_387157840_10_42_0&hpos=2&matching_block_id=1096886305_387157840_10_42_0&no_rooms=1&req_adults=10&req_children=0&room1=A%2CA%2CA%2CA%2CA%2CA%2CA%2CA%2CA%2CA&sb_price_type=total&sr_order=price&sr_pri_blocks=1096886305_387157840_10_42_0__30400&srepoch=1778412077&srpvid=8f4d4f5ec7e901c4&type=total&ucfs=1&",
+            details: "Most popular: Outdoor swimming pool, Non-smoking rooms, Restaurant, Free parking, Family rooms, Breakfast\nGreat for your stay: Restaurant, Parking, Family rooms, BBQ facilities, Free parking, Outdoor swimming pool, Water sport facilities on site\n\nOutdoors: Outdoor fireplace, Picnic area, Outdoor furniture, Sun terrace, BBQ facilities (extra charge), Terrace, Garden\nActivities: Cooking class (extra charge), Tour or class about local culture, Bike tours, Walking tours, Badminton equipment, Water sport facilities on site, Cycling, Fishing\nFood & Drink: Kids' meals, Restaurant\nInternet: No internet access available.\nParking: Free private parking is possible on site (reservation is not needed).\nServices: Packed lunches, Express check-in/check-out\nReception services: Invoice provided\nEntertainment & family services: Board games/puzzles\nSafety & security: CCTV outside property, CCTV in common areas, Smoke alarms, Security alarm, 24-hour security\nGeneral: Designated smoking area, Air conditioning, Soundproof rooms, Family rooms, Non-smoking rooms\nOutdoor swimming pool: Free!, Open all year, Adults only, Pool with view, Swimming pool toys, Pool/beach towels, Sun loungers or beach chairs, Sun umbrellas\nWellness: Sun umbrellas, Sun loungers or beach chairs, Public Bath, Open-air bath\nLanguages spoken: English"
+          },
+          {
+            name: "Ayana Resort Wilpattu", price: 119900,
+            link: "https://www.booking.com/hotel/lk/ayana-resort-wilpattu.en-gb.html?aid=373420&label=wilpattu-TN0zINL62vk0tIxRyI4YGgS394449923009%3Apl%3Ata%3Ap1%3Ap2%3Aac%3Aap%3Aneg%3Afi%3Atikwd-30597217534%3Alp1009919%3Ali%3Adec%3Adm%3Appccp%3DUmFuZG9tSVYkc2RlIyh9Ydj4ck6nIj5YRjPru0SpaEk&sid=68c4188c5b1140ab7687ef0998b50bdb&all_sr_blocks=1549123902_426776923_0_2_0%2C1549123902_426776923_0_2_0%2C1549123901_426776923_0_2_0%2C1549123901_426776923_0_2_0&checkin=2026-06-01&checkout=2026-06-03&dest_id=900050876&dest_type=city&dist=0&group_adults=10&group_children=0&hapos=4&highlighted_blocks=1549123902_426776923_0_2_0%2C1549123902_426776923_0_2_0%2C1549123901_426776923_0_2_0%2C1549123901_426776923_0_2_0&hpos=4&matching_block_id=1549123902_426776923_0_2_0&no_rooms=1&req_adults=10&req_children=0&room1=A%2CA%2CA%2CA%2CA%2CA%2CA%2CA%2CA%2CA&sb_price_type=total&sr_order=price&sr_pri_blocks=1549123902_426776923_0_2_0__10080%2C1549123902_426776923_0_2_0__10080%2C1549123901_426776923_0_2_0__8120%2C1549123901_426776923_0_2_0__8120&srepoch=1778412087&srpvid=8f4d4f5ec7e901c4&type=total&ucfs=1&",
+            details: "Most popular: Airport shuttle (free), Free WiFi, Restaurant, Free parking, Family rooms, Tea/coffee maker, Breakfast\nGreat for your stay: Restaurant, Parking, Balcony, Private bathroom, Air conditioning, Free WiFi, View, Terrace, Family rooms, Airport shuttle (free)\n\nPrivate bathroom: Toilet paper, Towels, Bath or shower, Toilet, Free toiletries, Hairdryer, Bath, Shower\nBedroom: Wardrobe or closet\nView: Landmark view, Garden view, View\nOutdoors: Outdoor fireplace, Picnic area, Outdoor furniture, Outdoor dining area, Patio, Balcony, Terrace, Garden\nKitchen: Electric kettle\nRoom amenities: Drying rack for clothing, Clothes rack\nActivities: Children's playground\nLiving Area: Dining area, Seating Area, Desk\nFood & Drink: Coffee house on site, Kids' meals, Restaurant, Tea/Coffee maker\nInternet: WiFi is available in all areas and is free of charge.\nParking: Free private parking is possible on site (reservation is not needed).\nServices: Grocery deliveries (extra charge), Daily housekeeping, Private check-in/check-out, Luggage storage, Airport shuttle, 24-hour front desk\nReception services: Invoice provided\nSafety & security: Fire extinguishers, CCTV in common areas, Key card access, Key access, 24-hour security\nGeneral: Designated smoking area, Air conditioning, Non-smoking throughout, Tile/marble floor, Soundproofing, Carpeted, Heating, Family rooms, Ironing facilities\nLanguages spoken: English"
+          },
+          {
+            name: "The Blue Sapphire Of Wilpattu", price: 152670,
+            link: "https://www.booking.com/hotel/lk/leopard-cross-safary-tours.en-gb.html?aid=373420&label=wilpattu-TN0zINL62vk0tIxRyI4YGgS394449923009%3Apl%3Ata%3Ap1%3Ap2%3Aac%3Aap%3Aneg%3Afi%3Atikwd-30597217534%3Alp1009919%3Ali%3Adec%3Adm%3Appccp%3DUmFuZG9tSVYkc2RlIyh9Ydj4ck6nIj5YRjPru0SpaEk&sid=68c4188c5b1140ab7687ef0998b50bdb&all_sr_blocks=588074717_431702889_3_1_0%2C588074717_431702889_3_1_0%2C588074718_431702889_4_1_0&checkin=2026-06-01&checkout=2026-06-03&dest_id=900050876&dest_type=city&dist=0&group_adults=10&group_children=0&hapos=9&highlighted_blocks=588074717_431702889_3_1_0%2C588074717_431702889_3_1_0%2C588074718_431702889_4_1_0&hpos=9&matching_block_id=588074717_431702889_3_1_0&no_rooms=1&req_adults=10&req_children=0&room1=A%2CA%2CA%2CA%2CA%2CA%2CA%2CA%2CA%2CA&sb_price_type=total&sr_order=price&sr_pri_blocks=588074717_431702889_3_1_0__11750%2C588074717_431702889_3_1_0__11750%2C588074718_431702889_4_1_0__23760&srepoch=1778412328&srpvid=8f4d4f5ec7e901c4&type=total&ucfs=1&",
+            details: "Most popular: Non-smoking rooms, Airport shuttle, Room service, Free WiFi, 2 restaurants, Free parking, Family rooms, Tea/coffee maker, Bar, Breakfast\nGreat for your stay: 2 restaurants, Parking, Balcony, Private bathroom, Air conditioning, Free WiFi, View, Family rooms, Airport shuttle, Flat-screen TV\n\nPrivate bathroom: Toilet paper, Towels, Toilet, Bathrobe, Hairdryer, Shower\nView: Landmark view, Garden view, Lake view\nOutdoors: Outdoor fireplace, Picnic area, Outdoor furniture, Outdoor dining area, Balcony, Garden\nKitchen: Shared kitchen, Dining table, Cleaning products, Electric kettle, Refrigerator\nRoom amenities: Socket near the bed, Sofa bed, Drying rack for clothing, Clothes rack\nActivities: Bicycle rental, Bike tours, Walking tours, Cycling (off-site), Hiking (off-site), Children's playground\nLiving Area: Dining area, Sofa, Seating Area, Desk\nMedia & Technology: Flat-screen TV, Cable channels, Satellite channels, TV\nFood & Drink: Coffee house on site, Fruits, Wine/champagne, Kid-friendly buffet, Kids' meals, Snack bar, Breakfast in the room, Bar, Restaurant, Tea/Coffee maker\nInternet: WiFi is available in public areas and is free of charge.\nParking: Free private parking is possible on site (reservation is needed). Parking garage\nTransport: Public transport tickets (extra charge)\nReception services: Invoice provided, Private check-in/check-out, Luggage storage (extra charge), Currency exchange, Express check-in/check-out, 24-hour front desk\nEntertainment & family services: Baby safety gates, Kids' outdoor play equipment, Indoor play area, Board games/puzzles\nCleaning services: Daily housekeeping, Ironing service (extra charge), Dry cleaning (extra charge), Laundry\nSafety & security: Fire extinguishers, CCTV outside property, CCTV in common areas, Security alarm, 24-hour security, Safety deposit box\nGeneral: Shuttle service, Carbon monoxide detector, Grocery deliveries, Shared lounge/TV area, Air conditioning, Mosquito net, Tile/marble floor, Heating, Soundproofing, Private entrance, Car hire, Packed lunches, Soundproof rooms, Fan, Family rooms, Ironing facilities, Airport shuttle (extra charge), Non-smoking rooms, Iron, Room service\nWellness: Sun umbrellas\nLanguages spoken: English"
+          }
+        ]
+      },
+      {
+        id: "knuckles", emoji: "⛰️", name: "Knuckles Mountain Range",
+        activities: ["Mountain hiking", "Camping", "Reconnect with nature and become Tazan's"],
+        travelTime: "5 hours 20 mins",
+        accommodations: [
+          {
+            name: "Knuckles Barefoot Inns", price: 42408,
+            link: "https://www.booking.com/hotel/lk/knuckles-barefoot-inns.html?aid=356980&label=gog235jc-10CAYohQFCF2tudWNrbGVzLW1vdW50YWluLXJhbmdlSDNYA2iFAYgBAZgBM7gBF8gBDNgBA-gBAfgBAYgCAagCAbgC89eB0AbAAgHSAiQ3NGMwYTU2MS04OWZhLTRmYjktYmYyNS0wZDg1NmY3OWU1YmPYAgHgAgE&sid=68c4188c5b1140ab7687ef0998b50bdb&all_sr_blocks=1581424601_429250011_6_2_0%2C1581424601_429250011_6_2_0&checkin=2026-06-12&checkout=2026-06-14&dest_id=15201&dest_type=region&dist=0&group_adults=10&group_children=0&hapos=1&highlighted_blocks=1581424601_429250011_6_2_0%2C1581424601_429250011_6_2_0&hpos=1&matching_block_id=1581424601_429250011_6_2_0&no_rooms=1&req_adults=10&req_children=0&room1=A%2CA%2CA%2CA%2CA%2CA%2CA%2CA%2CA%2CA&sb_price_type=total&sr_order=review_score_and_price&sr_pri_blocks=1581424601_429250011_6_2_0__6600%2C1581424601_429250011_6_2_0__6600&srepoch=1778412712&srpvid=d7cd50c38aa50034&type=total&ucfs=1&",
+            details: "Most popular: Swimming pool, Free parking, Free WiFi, Airport shuttle (free), Non-smoking rooms, Room service, Family rooms, Breakfast\nGreat for your stay: Parking, Balcony, Private bathroom, Free WiFi, View, Terrace, Family rooms, Airport shuttle (free), Room service, Free parking\n\nPrivate bathroom: Toilet paper, Towels, Toilet, Free toiletries, Hairdryer, Shower\nBedroom: Linens, Wardrobe or closet\nView: Mountain view, Pool view, View\nOutdoors: Outdoor furniture, Barbecue, Balcony, Terrace, Garden\nKitchen: Dining table, Electric kettle, Microwave\nRoom amenities: Clothes rack\nLiving Area: Dining area, Desk\nFood & Drink: Tea/Coffee maker\nInternet: Wifi is available in all areas and is free of charge.\nParking: Free private parking is available on site (reservation is not needed). Electric vehicle charging station\nServices: Airport shuttle, 24-hour front desk, Room service\nGeneral: Smoke-free property, Fan, Family rooms, Non-smoking rooms\nSwimming pool: Swimming pool\nLanguages spoken: English"
+          },
+          {
+            name: "Willow Nest Inn", price: 45621,
+            link: "https://www.booking.com/hotel/lk/willow-nest-inn.html?aid=356980&label=gog235jc-10CAYohQFCF2tudWNrbGVzLW1vdW50YWluLXJhbmdlSDNYA2iFAYgBAZgBM7gBF8gBDNgBA-gBAfgBAYgCAagCAbgC89eB0AbAAgHSAiQ3NGMwYTU2MS04OWZhLTRmYjktYmYyNS0wZDg1NmY3OWU1YmPYAgHgAgE&sid=68c4188c5b1140ab7687ef0998b50bdb&all_sr_blocks=1579687003_431657216_6_33_0%2C1579687002_431657216_4_33_0&checkin=2026-06-12&checkout=2026-06-14&dest_id=15201&dest_type=region&dist=0&group_adults=10&group_children=0&hapos=2&highlighted_blocks=1579687003_431657216_6_33_0%2C1579687002_431657216_4_33_0&hpos=2&matching_block_id=1579687003_431657216_6_33_0&no_rooms=1&req_adults=10&req_children=0&room1=A%2CA%2CA%2CA%2CA%2CA%2CA%2CA%2CA%2CA&sb_price_type=total&sr_order=review_score_and_price&sr_pri_blocks=1579687003_431657216_6_33_0__7800%2C1579687002_431657216_4_33_0__6400&srepoch=1778412803&srpvid=d7cd50c38aa50034&type=total&ucfs=1&#tab-main",
+            details: "Most popular: Free parking, Wifi, Non-smoking rooms, Family rooms, Breakfast\nGreat for your stay: Parking, Private bathroom, Wifi, Pet friendly, View, Family rooms, Free parking, Non-smoking rooms, Shower\n\nPrivate bathroom: Toilet paper, Towels, Bidet, Toilet, Shower\nBedroom: Linens\nView: View\nKitchen: Dining table\nRoom amenities: Clothes rack\nPets: Pets are allowed. No extra charges.\nLiving Area: Desk\nInternet: Wifi is available in the rooms and costs US$5 per 24 hours.\nParking: Free private parking is available on site (reservation is not needed).\nServices: Private check-in/out, 24-hour front desk\nSafety & security: CCTV outside property, 24-hour security, Safe\nGeneral: Air conditioning, Private entrance, Fan, Family rooms, Non-smoking rooms\nAccessibility: Entire unit located on ground floor\nLanguages spoken: English"
+          },
+          {
+            name: "Hiranya Mountain View Hostel Kandy", price: 48191,
+            link: "https://www.booking.com/hotel/lk/mountain-view-hostel.html?aid=356980&label=gog235jc-10CAYohQFCF2tudWNrbGVzLW1vdW50YWluLXJhbmdlSDNYA2iFAYgBAZgBM7gBF8gBDNgBA-gBAfgBAYgCAagCAbgC89eB0AbAAgHSAiQ3NGMwYTU2MS04OWZhLTRmYjktYmYyNS0wZDg1NmY3OWU1YmPYAgHgAgE&sid=68c4188c5b1140ab7687ef0998b50bdb&all_sr_blocks=348478405_210387476_6_0_0%2C348478402_210387476_4_0_0&checkin=2026-06-12&checkout=2026-06-14&dest_id=15201&dest_type=region&dist=0&group_adults=10&group_children=0&hapos=6&highlighted_blocks=348478405_210387476_6_0_0%2C348478402_210387476_4_0_0&hpos=6&matching_block_id=348478405_210387476_6_0_0&no_rooms=1&req_adults=10&req_children=0&room1=A%2CA%2CA%2CA%2CA%2CA%2CA%2CA%2CA%2CA&sb_price_type=total&sr_order=review_score_and_price&sr_pri_blocks=348478405_210387476_6_0_0__10000%2C348478402_210387476_4_0_0__6800&srepoch=1778413188&srpvid=d7cd50c38aa50034&type=total&ucfs=1&",
+            details: "Most popular: Free parking, Free Wifi, Airport shuttle (free), Non-smoking rooms, Family rooms, 24-hour front desk, Air conditioning, Terrace\nGreat for your stay: Parking, Free Wifi, Family rooms, Airport shuttle (free), Free parking, Non-smoking rooms, Street parking, Shower, Hiking, Neck massage\n\nPrivate bathroom: Toilet paper, Towels, Slippers, Toilet, Shower\nBedroom: Extra long beds (> 6.5 ft)\nOutdoors: Outdoor furniture, Terrace\nRoom amenities: Clothes rack\nActivities: Bicycle rental (extra charge), Cooking class (extra charge), Tour or class about local culture (extra charge), Bike tours (extra charge), Walking tours (extra charge), Hiking (extra charge)\nInternet: Wifi is available in all areas and is free of charge.\nParking: Free public parking is available at a location nearby (reservation is not needed). Street parking\nTransport: Public transit tickets (extra charge)\nFront Desk Services: Invoice provided, Lockers, 24-hour front desk\nEntertainment & Family Services: Board games/Puzzles\nCleaning Services: Daily housekeeping, Suit press (extra charge), Ironing service (extra charge), Dry cleaning (extra charge), Laundry (extra charge)\nBusiness Facilities: Fax/Photocopying (extra charge)\nSafety & security: Fire extinguishers, CCTV outside property, 24-hour security\nGeneral: Convenience store on site, Shared lounge/TV area, Designated smoking area, Air conditioning, Mosquito net, Private entrance, Car rental, Family rooms, Airport shuttle, Non-smoking rooms\nAccessibility: Upper floors accessible by stairs only\nSpa: Full-body massage, Hand massage, Head massage, Foot massage, Neck massage, Back massage, Massage (extra charge)\nLanguages spoken: English"
+          },
+          {
+            name: "Swiss Garden Holiday Home", price: 51404,
+            link: "https://www.booking.com/hotel/lk/swiss-garden-home-stay.html?aid=356980&label=gog235jc-10CAYohQFCF2tudWNrbGVzLW1vdW50YWluLXJhbmdlSDNYA2iFAYgBAZgBM7gBF8gBDNgBA-gBAfgBAYgCAagCAbgC89eB0AbAAgHSAiQ3NGMwYTU2MS04OWZhLTRmYjktYmYyNS0wZDg1NmY3OWU1YmPYAgHgAgE&sid=68c4188c5b1140ab7687ef0998b50bdb&all_sr_blocks=1259500901_398550880_10_0_0&checkin=2026-06-12&checkout=2026-06-14&dest_id=15201&dest_type=region&dist=0&group_adults=10&group_children=0&hapos=5&highlighted_blocks=1259500901_398550880_10_0_0&hpos=5&matching_block_id=1259500901_398550880_10_0_0&no_rooms=1&req_adults=10&req_children=0&room1=A%2CA%2CA%2CA%2CA%2CA%2CA%2CA%2CA%2CA&sb_price_type=total&sr_order=review_score_and_price&sr_pri_blocks=1259500901_398550880_10_0_0__16000&srepoch=1778412803&srpvid=d7cd50c38aa50034&type=total&ucfs=1&",
+            details: "Most popular: Free parking, Free Wifi, Non-smoking rooms, Family rooms, Air conditioning, Garden, Terrace\nGreat for your stay: Parking, Balcony, Private bathroom, Air conditioning, Free Wifi, Kitchen, BBQ facilities, View, Terrace, Family rooms\n\nParking: Free private parking is available on site (reservation is not needed).\nInternet: Wifi is available in all areas and is free of charge.\nKitchen: Dining table, Cleaning products, Toaster, Oven, Kitchenware, Electric kettle, Kitchen, Washing machine, Microwave, Refrigerator, Kitchenette\nBedroom: Linens, Walk-in closet, Extra long beds (> 6.5 ft)\nPrivate bathroom: Towels, Bathtub or shower, Slippers, Toilet, Free toiletries, Hairdryer, Bathtub, Shower\nLiving Area: Dining area, Sofa, Sitting area, Desk\nMedia & Technology: Streaming service (like Netflix), Flat-screen TV, Satellite channels, Video, TV\nRoom amenities: Drying rack for clothing, Tile/Marble floor, Private entrance, Fan, Ironing facilities, Iron\nOutdoors: Outdoor dining area, Outdoor furniture, BBQ facilities (extra charge), Balcony, Terrace, Garden\nFood & Drink: Tea/Coffee maker\nOutdoor & View: Inner courtyard view, Garden view, View\nMiscellaneous: Air conditioning, Smoke-free property, Family rooms, Non-smoking rooms\nLanguages spoken: English, Tamil"
+          }
+        ]
+      },
+      {
+        id: "hiriketiya", emoji: "🏄", name: "Hiriketiya Beach",
+        activities: ["Surfing", "Visit Hummanaya Blowhole (20 mins away)", "Burying someone alive", "Building a sand castle"],
+        travelTime: "3 hours",
+        accommodations: [
+          {
+            name: "coco drift hiriketiya", price: 7740, rooms: 2,
+            link: "https://www.booking.com/hotel/lk/coco-drift-hiriketiya.en-gb.html?aid=373420&label=hiriketiya-aMfthOR_K36DUZU0zS0A9wS629399120839%3Apl%3Ata%3Ap1%3Ap2%3Aac%3Aap%3Aneg%3Afi%3Atikwd-303855644321%3Alp1009919%3Ali%3Adec%3Adm%3Appccp%3DUmFuZG9tSVYkc2RlIyh9Ydj4ck6nIj5YRjPru0SpaEk&sid=68c4188c5b1140ab7687ef0998b50bdb&all_sr_blocks=1601069301_432884775_6_0_0%2C1601069301_432884775_5_0_0&checkin=2026-06-05&checkout=2026-06-07&dest_id=900059611&dest_type=city&dist=0&group_adults=11&group_children=0&hapos=1&highlighted_blocks=1601069301_432884775_6_0_0%2C1601069301_432884775_5_0_0&hpos=1&matching_block_id=1601069301_432884775_6_0_0&no_rooms=1&req_adults=11&req_children=0&room1=A%2CA%2CA%2CA%2CA%2CA%2CA%2CA%2CA%2CA%2CA&sb_price_type=total&sr_order=price&sr_pri_blocks=1601069301_432884775_6_0_0__1239%2C1601069301_432884775_5_0_0__1170&srepoch=1778407621&srpvid=35c94526404009c1&type=total&ucfs=1&",
+            details: "Most popular: Free WiFi, Free parking, Private beach area\nGreat for your stay: Parking, Private bathroom, Air conditioning, Free WiFi, Bath, Flat-screen TV, Free parking, Beach, Shower, Pub crawls\n\nPrivate bathroom: Toilet paper, Towels/sheets (extra fee), Toilet, Hairdryer, Bath, Shower\nBedroom: Linen\nOutdoors: Private beach area, Garden\nKitchen: Shared kitchen, Refrigerator\nRoom amenities: Clothes rack\nActivities: Bicycle rental, Live music/performance, Bike tours, Walking tours, Movie nights, Pub crawls, Beach, Evening entertainment, Hiking (off-site), Karaoke, Games room\nMedia & Technology: Flat-screen TV\nInternet: WiFi is available in all areas and is free of charge.\nParking: Free private parking is possible on site (reservation is not needed).\nServices: Shared lounge/TV area, 24-hour front desk\nEntertainment & family services: Board games/puzzles\nGeneral: Non-smoking throughout, Carpeted, Air conditioning\nLanguages spoken: German, English"
+          },
+          {
+            name: "Tranquil Lavish Resort Hiriketiya", price: 68110, rooms: 3,
+            link: "https://www.booking.com/hotel/lk/tranquil-lavish-resort-hiriketiya.en-gb.html?aid=373420&label=hiriketiya-aMfthOR_K36DUZU0zS0A9wS629399120839%3Apl%3Ata%3Ap1%3Ap2%3Aac%3Aap%3Aneg%3Afi%3Atikwd-303855644321%3Alp1009919%3Ali%3Adec%3Adm%3Appccp%3DUmFuZG9tSVYkc2RlIyh9Ydj4ck6nIj5YRjPru0SpaEk&sid=68c4188c5b1140ab7687ef0998b50bdb&all_sr_blocks=1601435103_431095239_4_0_0%2C1601435102_431095239_2_0_0%2C1601435102_431095239_2_0_0%2C1601435102_431095239_2_0_0&checkin=2026-06-05&checkout=2026-06-07&dest_id=900059611&dest_type=city&dist=0&group_adults=10&group_children=0&hapos=7&highlighted_blocks=1601435103_431095239_4_0_0%2C1601435102_431095239_2_0_0%2C1601435102_431095239_2_0_0%2C1601435102_431095239_2_0_0&hpos=7&matching_block_id=1601435103_431095239_4_0_0&no_rooms=1&req_adults=10&req_children=0&room1=A%2CA%2CA%2CA%2CA%2CA%2CA%2CA%2CA%2CA&sb_price_type=total&sr_order=price&sr_pri_blocks=1601435103_431095239_4_0_0__10000%2C1601435102_431095239_2_0_0__5600%2C1601435102_431095239_2_0_0__5600%2C1601435102_431095239_2_0_0__5600&srepoch=1778408723&srpvid=916b492d5fe50203&type=total&ucfs=1&",
+            details: "Most popular: Non-smoking rooms, Free WiFi, Airport shuttle, Room service, Free parking, Family rooms, Tea/coffee maker, Breakfast\nGreat for your stay: Parking, Balcony, Private bathroom, Air conditioning, Kitchen, Free WiFi, View, Terrace, Family rooms, Flat-screen TV\n\nPrivate bathroom: Toilet paper, Towels, Bidet, Additional toilet, Bath or shower, Toilet, Free toiletries, Hairdryer, Shower\nBedroom: Linen, Wardrobe or closet\nView: Garden view\nOutdoors: Outdoor furniture, Outdoor dining area, Patio, Balcony, Terrace, Garden\nKitchen: Shared kitchen, Dining table, Cleaning products, Toaster, Oven, Tumble dryer, Kitchenware, Electric kettle, Kitchen, Dishwasher, Microwave, Refrigerator, Kitchenette\nRoom amenities: Socket near the bed, Drying rack for clothing, Clothes rack\nActivities: Bicycle rental (extra charge), Tour or class about local culture (extra charge), Bike tours (extra charge), Walking tours, Movie nights\nLiving Area: Dining area, Sofa, Seating Area, Desk\nMedia & Technology: Flat-screen TV, Satellite channels, TV\nFood & Drink: Tea/Coffee maker\nInternet: WiFi is available in all areas and is free of charge.\nParking: Free private parking is possible on site (reservation is not needed).\nReception services: Invoice provided, Private check-in/check-out, Luggage storage, Express check-in/check-out, 24-hour front desk\nCleaning services: Daily housekeeping, Ironing service (extra charge), Laundry (extra charge)\nSafety & security: Fire extinguishers, CCTV outside property, CCTV in common areas, 24-hour security, Safety deposit box\nGeneral: Shuttle service (extra charge), Grocery deliveries (extra charge), Shared lounge/TV area, Air conditioning, Non-smoking throughout, Wake-up service, Tile/marble floor, Car hire, Packed lunches, Carpeted, Fan, Family rooms, Ironing facilities, Airport shuttle (extra charge), Non-smoking rooms, Iron, Room service\nLanguages spoken: English"
+          },
+          {
+            name: "Villa Hiriketiya", price: 78000, rooms: 2,
+            link: "https://www.booking.com/hotel/lk/villa-hiriketiya.en-gb.html?aid=373420&label=hiriketiya-aMfthOR_K36DUZU0zS0A9wS629399120839%3Apl%3Ata%3Ap1%3Ap2%3Aac%3Aap%3Aneg%3Afi%3Atikwd-303855644321%3Alp1009919%3Ali%3Adec%3Adm%3Appccp%3DUmFuZG9tSVYkc2RlIyh9Ydj4ck6nIj5YRjPru0SpaEk&sid=68c4188c5b1140ab7687ef0998b50bdb&all_sr_blocks=246368702_379943314_4_2_0%2C246368701_379943314_2_2_0%2C246368703_379943314_2_2_0%2C246368704_379943314_2_2_0&checkin=2026-06-05&checkout=2026-06-07&dest_id=900059611&dest_type=city&dist=0&group_adults=10&group_children=0&hapos=26&highlighted_blocks=246368702_379943314_4_2_0%2C246368701_379943314_2_2_0%2C246368703_379943314_2_2_0%2C246368704_379943314_2_2_0&hpos=1&matching_block_id=246368702_379943314_4_2_0&no_rooms=1&req_adults=10&req_children=0&room1=A%2CA%2CA%2CA%2CA%2CA%2CA%2CA%2CA%2CA&sb_price_type=total&sr_order=price&sr_pri_blocks=246368702_379943314_4_2_0__14364%2C246368701_379943314_2_2_0__10108%2C246368703_379943314_2_2_0__10108%2C246368704_379943314_2_2_0__10108&srepoch=1778408783&srpvid=916b492d5fe50203&type=total&ucfs=1&",
+            details: "Most popular: Outdoor swimming pool, Non-smoking rooms, Free WiFi, Airport shuttle, Room service, Free parking, Restaurant, Family rooms, Bar, Breakfast\nGreat for your stay: Restaurant, Parking, Private bathroom, Air conditioning, Free WiFi, View, Family rooms, Airport shuttle, Room service, Outdoor swimming pool\n\nPrivate bathroom: Toilet paper, Towels, Bidet, Toilet, Free toiletries, Shower\nBedroom: Linen, Wardrobe or closet\nView: Pool view, Garden view\nOutdoors: Outdoor dining area, Outdoor furniture, Garden\nRoom amenities: Socket near the bed, Drying rack for clothing, Fold-up bed, Clothes rack\nActivities: Snorkelling (off-site), Diving (extra charge), Fishing (extra charge)\nLiving Area: Seating Area\nFood & Drink: Fruits (extra charge), Kids' meals (extra charge), Breakfast in the room, Bar, Restaurant\nInternet: WiFi is available in all areas and is free of charge.\nParking: Free private parking is possible on site (reservation is needed).\nServices: Shuttle service (extra charge), Daily housekeeping, Wake-up service, Ironing service (extra charge), Laundry (extra charge), Airport shuttle (extra charge), 24-hour front desk, Room service\nGeneral: Air conditioning (extra charge), Mosquito net, Tile/marble floor, Private entrance, Fan, Family rooms, Non-smoking rooms\nAccessibility: Entire unit located on ground floor\nOutdoor swimming pool: Free!, Open all year, All ages welcome, Pool/beach towels, Sun loungers or beach chairs\nWellness: Sun loungers or beach chairs\nLanguages spoken: English"
+          }
+        ]
+      }
+    ];
+
+    // ---------- PASSWORD GATE ----------
+    const CORRECT_PASSWORD = "The Reasons";
+    const passwordGate = document.getElementById('passwordGate');
+    const mainContent = document.getElementById('mainContent');
+    const passwordInput = document.getElementById('passwordInput');
+    const passwordSubmit = document.getElementById('passwordSubmit');
+    const gateError = document.getElementById('gateError');
+
+    function checkPassword() {
+      if (passwordInput.value === CORRECT_PASSWORD) {
+        localStorage.setItem('trip_auth', 'true');
+        passwordGate.classList.add('hidden');
+        mainContent.style.display = 'block';
+        initApp();
+      } else {
+        gateError.textContent = 'Wrong password. Try again.';
+        passwordInput.value = '';
+      }
+    }
+    passwordSubmit.addEventListener('click', checkPassword);
+    passwordInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') checkPassword(); });
+    if (localStorage.getItem('trip_auth') === 'true') {
+      passwordGate.classList.add('hidden');
+      mainContent.style.display = 'block';
+      initApp();
+    }
+
+    // ---------- LOCAL STORAGE HELPERS ----------
+    function getVoterId() {
+      let id = localStorage.getItem('voterId');
+      if (!id) { id = 'voter_' + Math.random().toString(36).substr(2,9); localStorage.setItem('voterId', id); }
+      return id;
+    }
+    function getVotedTrip() { return localStorage.getItem('votedTrip') || null; }
+    function setVotedTrip(tripId) { localStorage.setItem('votedTrip', tripId); }
+
+    // ---------- FIREBASE VOTING ----------
+    async function castVote(tripId, voterId, displayName) {
+      const voteRef = db.collection('votes').doc(voterId);
+      await db.runTransaction(async (transaction) => {
+        const doc = await transaction.get(voteRef);
+        if (doc.exists) throw new Error('ALREADY_VOTED');
+        transaction.set(voteRef, { tripId, displayName: displayName || 'Anonymous', timestamp: firebase.firestore.FieldValue.serverTimestamp() });
+      });
+    }
+
+    let currentVoteCounts = {};
+    function listenVotes() {
+      db.collection('votes').onSnapshot(snapshot => {
+        const counts = {};
+        snapshot.forEach(doc => { const d = doc.data(); counts[d.tripId] = (counts[d.tripId]||0)+1; });
+        currentVoteCounts = counts;
+        updateAllVoteDisplays();
+      });
+    }
+
+    // ---------- FIREBASE COMMENTS ----------
+    function listenComments(tripId, callback) {
+      db.collection('comments')
+        .where('tripId', '==', tripId)
+        .orderBy('timestamp', 'asc')
+        .onSnapshot(snapshot => {
+          const comments = [];
+          snapshot.forEach(doc => comments.push({ id: doc.id, ...doc.data() }));
+          callback(comments);
+        });
+    }
+
+    async function addComment(tripId, name, text) {
+      await db.collection('comments').add({ tripId, name: name || 'Anonymous', text, timestamp: firebase.firestore.FieldValue.serverTimestamp() });
+    }
+
+    // ---------- BUILD STATIC UI ----------
+    function buildStaticUI() {
+      const container = document.getElementById('tripsContainer');
+      container.innerHTML = '';
+      trips.forEach(trip => {
+        const card = document.createElement('div');
+        card.className = 'trip-card';
+        card.innerHTML = `
+          <div class="trip-header"><span class="trip-icon">${trip.emoji}</span><h2>${trip.name}</h2></div>
+          <ul class="activities">${trip.activities.map(a => `<li>${a}</li>`).join('')}</ul>
+          ${trip.travelTime ? `<div class="travel-time">🚗 ${trip.travelTime}</div>` : ''}
+          <div class="accommodations">
+            <h3>🏡 Accommodation</h3>
+            <div class="acc-list">
+              ${trip.accommodations.map(acc => `
+                <div class="acc-item">
+                  <div class="acc-name-price">
+                    <span class="acc-name">${acc.name}</span>
+                    <span class="acc-price">💰 LKR ${acc.price.toLocaleString()}${acc.rooms ? ` (${acc.rooms} rooms)` : ''}</span>
+                  </div>
+                  <div class="acc-buttons">
+                    <button class="btn outline" data-details="${encodeURIComponent(acc.details)}">More Info</button>
+                    <a href="${acc.link}" target="_blank" class="btn outline">Booking →</a>
+                  </div>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+          <div class="vote-section">
+            <button class="btn vote-btn" data-trip-id="${trip.id}">Vote this trip</button>
+            <span class="vote-count" data-trip-id="${trip.id}">❤️ 0</span>
+          </div>
+          <div class="comment-wall">
+            <h4>💬 Live Wall</h4>
+            <div class="comment-input">
+              <input type="text" placeholder="Name" class="comment-name">
+              <textarea placeholder="Your thought..." class="comment-text"></textarea>
+              <button class="send-comment-btn" data-trip-id="${trip.id}">→</button>
+            </div>
+            <div class="live-comments" data-trip-id="${trip.id}"></div>
+          </div>
+        `;
+        container.appendChild(card);
+      });
+
+      // Attach static event listeners
+      document.querySelectorAll('.btn[data-details]').forEach(btn => {
+        btn.addEventListener('click', () => openModal(decodeURIComponent(btn.dataset.details)));
+      });
+      document.querySelectorAll('.vote-btn').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          if (getVotedTrip()) { alert('You already voted.'); return; }
+          const tripId = btn.dataset.tripId;
+          const name = prompt('Your name') || 'Anonymous';
+          const voterId = getVoterId();
+          try {
+            await castVote(tripId, voterId, name);
+            setVotedTrip(tripId);
+            updateAllVoteDisplays();
+          } catch(e) {
+            alert(e.message.includes('ALREADY_VOTED') ? 'You already voted' : 'Error voting.');
+          }
+        });
+      });
+      document.querySelectorAll('.send-comment-btn').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          const tripId = btn.dataset.tripId;
+          const nameInput = btn.parentElement.querySelector('.comment-name');
+          const textInput = btn.parentElement.querySelector('.comment-text');
+          const text = textInput.value.trim();
+          if (!text) return;
+          await addComment(tripId, nameInput.value.trim(), text);
+          textInput.value = '';
+        });
+      });
+    }
+
+    function updateAllVoteDisplays() {
+      const votedTrip = getVotedTrip();
+      document.querySelectorAll('.vote-btn').forEach(btn => {
+        const tripId = btn.dataset.tripId;
+        if (votedTrip && votedTrip !== tripId) {
+          btn.disabled = true;
+          btn.textContent = 'Already voted';
+        } else if (votedTrip === tripId) {
+          btn.disabled = true;
+          btn.textContent = '✅ Voted';
+        } else {
+          btn.disabled = false;
+          btn.textContent = 'Vote this trip';
+        }
+      });
+      document.querySelectorAll('.vote-count').forEach(span => {
+        const tripId = span.dataset.tripId;
+        span.textContent = `❤️ ${currentVoteCounts[tripId] || 0}`;
+      });
+    }
+
+    function startCommentListeners() {
+      trips.forEach(trip => {
+        const listEl = document.querySelector(`.live-comments[data-trip-id="${trip.id}"]`);
+        if (!listEl) return;
+        listenComments(trip.id, comments => {
+          listEl.innerHTML = comments.map(c => `<div class="comment-item"><strong>${c.name}</strong> ${c.text}</div>`).join('');
+        });
+      });
+    }
+
+    // ---------- MODAL ----------
+    window.openModal = function(details) {
+      document.getElementById('modalBody').innerHTML = `<div class="facilities-block">${details.replace(/\n/g, '<br>')}</div>`;
+      document.getElementById('infoModal').classList.add('open');
+    };
+    window.closeModal = function() { document.getElementById('infoModal').classList.remove('open'); };
+    document.getElementById('infoModal').addEventListener('click', (e) => { if (e.target === e.currentTarget) closeModal(); });
+
+    // ---------- BUDGET ----------
+    function updateBudget() {
+      const people = parseInt(document.getElementById('numPeople').value) || 10;
+      const daily = parseInt(document.getElementById('dailyExtra').value) || 4000;
+      const nights = parseInt(document.getElementById('numNights').value) || 2;
+      const tbody = document.querySelector('#budgetTable tbody');
+      tbody.innerHTML = '';
+      trips.forEach(trip => {
+        trip.accommodations.forEach(acc => {
+          const accTotal = acc.price;
+          const extraTotal = daily * people * nights;
+          const grandTotal = accTotal + extraTotal;
+          const perPerson = Math.round(grandTotal / people);
+          tbody.innerHTML += `<tr><td>${trip.emoji} ${trip.name} → ${acc.name}</td><td>LKR ${accTotal.toLocaleString()}</td><td>LKR ${extraTotal.toLocaleString()}</td><td><strong>LKR ${grandTotal.toLocaleString()}</strong></td><td>LKR ${perPerson.toLocaleString()}</td></tr>`;
+        });
+      });
+    }
+    function initBudget() {
+      document.getElementById('budgetTable').innerHTML = `<thead><tr><th>Trip / Accommodation</th><th>Stay</th><th>Food&nbsp;&&nbsp;Extras</th><th>Total</th><th>Per Person</th></tr></thead><tbody></tbody>`;
+      updateBudget();
+      document.getElementById('numPeople').addEventListener('input', updateBudget);
+      document.getElementById('dailyExtra').addEventListener('input', updateBudget);
+      document.getElementById('numNights').addEventListener('input', updateBudget);
+    }
+
+    // ---------- APP INIT ----------
+    function initApp() {
+      buildStaticUI();
+      listenVotes();
+      startCommentListeners();
+      initBudget();
+    }
+  </script>
+</body>
+</html>
