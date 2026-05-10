@@ -523,10 +523,9 @@
 
     trips.forEach(trip => {
       trip.accommodations.forEach(acc => {
-        // Original price was total for 2 nights → compute nightly rate
         const nightlyRate = Math.round(acc.price / 2);
-        const accTotal = nightlyRate * nights;          // stay scales with nights
-        const extraTotal = daily * people * nights;    // food/extra also scales
+        const accTotal = nightlyRate * nights;
+        const extraTotal = daily * people * nights;
         const grandTotal = accTotal + extraTotal;
         const perPerson = Math.round(grandTotal / people);
 
